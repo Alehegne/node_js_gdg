@@ -1,0 +1,26 @@
+{
+  "name": "dependency_management_and_script_automation",
+  "version": "1.0.0",
+  "description": "\"dependency management\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alehegne/node_js_gdg.git"
+  },
+  "keywords": [
+    "\"dependecy",
+    "managemnt\""
+  ],
+  "author": "\"Alehegne Geta\"",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Alehegne/node_js_gdg/issues"
+  },
+  "homepage": "https://github.com/Alehegne/node_js_gdg#readme",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
