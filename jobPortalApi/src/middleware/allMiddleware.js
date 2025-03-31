@@ -98,7 +98,7 @@ class Middleware {
       } = req.query;
       let query = {};
       //apply filter if they are in the allowed filters list
-
+      console.log("filters nowwwwwwww:", filters);
       allowedFilters.forEach((filter) => {
         if (filters[filter]) {
           if (filter === "skills") {
@@ -120,9 +120,30 @@ class Middleware {
               $regex: search,
               $options: "i",
             };
+          } else if (filter === "appliedAt") {
+            const now = new Date();
+
+            if (filters[filter] === "today") {
+              query[filter] = {
+                $gte: new Date(now.setHours(0, 0, 0, 0)),
+              };
+            } else if (filters[filter] === "this week") {
+              query[filter] = {
+                $gte: new Date(now.setDate(now.getDate() - 7)),
+              };
+            } else if (filters[filter] === "this month") {
+              query[filter] = {
+                $gte: new Date(now.setMonth(now.getMonth() - 1)),
+              };
+            } else if (filters[filter] === "this year") {
+              query[filter] = {
+                $gte: new Date(now.setFullYear(now.getFullYear() - 1)),
+              };
+            }
           } else {
             query[filter] = new RegExp(filters[filter], "i"); // case insensitive regex, with out regex, wont work
           }
+          console.log("query nowwwwwwww:", query);
         }
       });
       const sortBy = sort || "createdAt";
@@ -139,8 +160,9 @@ class Middleware {
     };
   }
   validateObjectId(req, res, next) {
-    console.log("validateJobData middleware called");
+    console.log("validate object id middleware called");
     const { id } = req.params;
+    console.log("id in validate object id middleware", id);
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -153,8 +175,7 @@ class Middleware {
         message: "id is not valid",
       });
     }
-
-    req.params.id = mongoose.Types.ObjectId(id);
+    console.log("id is valid", id);
     next();
   }
 }

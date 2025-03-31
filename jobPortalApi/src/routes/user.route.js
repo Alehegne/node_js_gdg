@@ -10,7 +10,7 @@ const upload = multer();
 userRouter.get(
   "/all",
   middleware.verifyToken,
-  middleware.verifyRole(["admin"]),
+  // middleware.verifyRole(["admin"]),
   UserController.getUser
 );
 userRouter.delete(

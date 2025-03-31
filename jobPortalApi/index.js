@@ -9,6 +9,8 @@ const Config = require("./src/config/allConfig");
 const middleware = require("./src/middleware/allMiddleware");
 const { authRouter } = require("./src/routes/auth.route");
 const jobRouter = require("./src/routes/job.route");
+const applicationRouter = require("./src/routes/application.route");
+const companiesRouter = require("./src/routes/company.route");
 dotenv.config();
 const app = express();
 //middleware
@@ -32,6 +34,8 @@ MongoConnect.connectToDb();
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/jobs", jobRouter);
+app.use("/api/applications", applicationRouter);
+app.use("/api/companies", companiesRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome to the Job Portal API");

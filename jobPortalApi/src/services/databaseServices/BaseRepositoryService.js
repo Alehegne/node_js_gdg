@@ -1,3 +1,5 @@
+const { default: mongoose } = require("mongoose");
+
 class BaseRepository {
   constructor(model) {
     this.model = model;
@@ -25,6 +27,13 @@ class BaseRepository {
       new: true,
     });
     return document;
+  }
+  async isDocumentExist(id) {
+    const document = await this.model.findById(id);
+    if (!document) {
+      return false;
+    }
+    return true;
   }
   async delete(id) {
     const document = await this.model.findByIdAndDelete(id);
