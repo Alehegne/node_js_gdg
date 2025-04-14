@@ -1,6 +1,6 @@
 const BaseController = require("./Base.Controller");
-const MessageService = require("../services/databaseServices/message.services");
-const UserService = require("../services/databaseServices/user.services");
+const MessageService = require("../services/main/message.services");
+const UserService = require("../services/main/user.services");
 
 class MessageController extends BaseController {
   constructor() {

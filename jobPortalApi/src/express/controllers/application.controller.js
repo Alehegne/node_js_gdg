@@ -1,9 +1,8 @@
 const BaseController = require("./Base.Controller");
-const ApplicationService = require("../services/databaseServices/application.services");
-const JobService = require("../services/databaseServices/job.services");
-const UserServices = require("../services/databaseServices/user.services");
+const ApplicationService = require("../services/main/application.services");
+const JobService = require("../services/main/job.services");
+const UserServices = require("../services/main/user.services");
 const { default: mongoose } = require("mongoose");
-const Application = require("../models/application.model");
 
 class ApplicationController extends BaseController {
   constructor() {
@@ -117,12 +116,13 @@ class ApplicationController extends BaseController {
     return this.handleRequest(req, res, next, async (req, res) => {
       const { jobId } = req.query;
       const { applicantId } = req.query;
+      const userId = req.query.userId || req.user.id; //for admin to fetch any user application
 
       //check if the user is jobSeeker,
       if (req.user.role === "jobSeeker") {
         //job seeker can only filter by applicantId
         const jobSeekerId = req.user.id;
-        const foundUser = await UserServices.isDocumentExist(jobSeekerId);
+        const foundUser = UserServices.findById(id);
         if (!foundUser) return this.errorMessage("user not found", 404, next);
         req.filter.applicantId = jobSeekerId;
       } else if (req.user.role === "employer" || req.user.role === "admin") {
@@ -132,11 +132,13 @@ class ApplicationController extends BaseController {
         if (jobId) {
           req.filter.jobId = jobId;
         } else {
-          const jobByEmployer = await JobService.findAll({
-            postedBy: req.user.id,
-          });
+          const jobByEmployer = await JobService.findAll({ postedBy: userId });
           if (!jobByEmployer || jobByEmployer.length === 0)
-            return this.errorMessage("you have no jobs posted", 404, next);
+            return this.errorMessage(
+              `there is no application submitted`,
+              404,
+              next
+            );
 
           const jobIds = jobByEmployer.map((job) => job._id);
           req.filter.jobId = { $in: jobIds };

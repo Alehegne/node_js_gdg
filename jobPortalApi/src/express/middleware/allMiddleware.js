@@ -1,4 +1,3 @@
-const userServices = require("../services/databaseServices/user.services");
 const utils = require("../utils/utils");
 const mongoose = require("mongoose");
 
@@ -10,11 +9,11 @@ class Middleware {
     };
   }
   verifyToken(req, res, next) {
-    console.log("verify token middleware called");
+    // console.log("verify token middleware called");
     // console.log("req cookies", req.cookies);
     const token = req.cookies.token;
 
-    console.log("token in verify token middleware", token);
+    // console.log("token in verify token middleware", token);
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -22,7 +21,7 @@ class Middleware {
       });
     }
     const decoded = utils.verifyToken(token);
-    console.log("decoded token in verify token middleware noww", decoded);
+    // console.log("decoded token in verify token middleware noww", decoded);
     if (!decoded.success) {
       return res.status(401).json({
         success: false,
@@ -35,7 +34,7 @@ class Middleware {
   }
   verifyRole(roles) {
     return (req, res, next) => {
-      console.log("verify role middleware called");
+      // console.log("verify role middleware called");
       // console.log("req.user in verify role middleware", req.user);
       if (!roles.includes(req.user.role)) {
         return res.status(403).json({
@@ -51,7 +50,7 @@ class Middleware {
   errorHandler(error, req, res, next) {
     // handle error middleware
 
-    console.log("handle error middleware called");
+    // console.log("handle error middleware called");
     console.error(error);
     const timeStamp = new Date().toISOString();
     return res.status(error.status || 500).json({
@@ -80,7 +79,7 @@ class Middleware {
   }
   queryFilter(allowedFilters = []) {
     return (req, res, next) => {
-      console.log("query filter middleware called");
+      // console.log("query filter middleware called");
       const {
         page = 1,
         limit = 15,
@@ -91,7 +90,7 @@ class Middleware {
       } = req.query;
       let query = {};
       //apply filter if they are in the allowed filters list
-      console.log("filters nowwwwwwww:", filters);
+      // console.log("filters nowwwwwwww:", filters);
       allowedFilters.forEach((filter) => {
         if (filters[filter]) {
           if (filter === "skills") {
@@ -143,7 +142,7 @@ class Middleware {
               query[filter] = filters[filter] === "true" ? true : false; // isVerified is boolean, so convert to boolean
             } else query[filter] = new RegExp(filters[filter], "i"); // case insensitive regex, with out regex, wont work
           }
-          console.log("query nowwwwwwww:", query);
+          // console.log("query nowwwwwwww:", query);
         }
       });
       const sortBy = sort || "createdAt";
@@ -160,9 +159,9 @@ class Middleware {
     };
   }
   validateObjectId(req, res, next) {
-    console.log("validate object id middleware called");
+    // console.log("validate object id middleware called");
     const { id } = req.params;
-    console.log("id in validate object id middleware", id);
+    // console.log("id in validate object id middleware", id);
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -175,7 +174,7 @@ class Middleware {
         message: "id is not valid",
       });
     }
-    console.log("id is valid", id);
+    // console.log("id is valid", id);
     next();
   }
 }

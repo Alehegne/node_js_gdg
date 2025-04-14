@@ -1,5 +1,5 @@
 const BaseController = require("./Base.Controller");
-const ReviewServices = require("../services/databaseServices/review.services");
+const ReviewServices = require("../services/main/review.services");
 
 class ReviewController extends BaseController {
   constructor() {

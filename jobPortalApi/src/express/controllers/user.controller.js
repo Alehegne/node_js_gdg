@@ -1,7 +1,8 @@
-const UserServices = require("../services/databaseServices/user.services");
+const UserServices = require("../services/main/user.services");
+const cacheKeys = require("../utils/cacheService/cacheKeys");
+const cacheService = require("../utils/cacheService/cacheService");
+const { invalidateUsersCache } = require("../utils/helper");
 const BaseController = require("./Base.Controller");
-const userCache = require("../services/cacheService/userCache");
-const { cacheService } = require("../services/cacheService/cacheService");
 
 class UserController extends BaseController {
   constructor() {
@@ -18,10 +19,30 @@ class UserController extends BaseController {
   async getUser(req, res, next) {
     return this.handleRequest(req, res, next, async (req, res) => {
       console.log("get user controller called");
-      let users = await userCache.getAllUser();
-      if (typeof users === "string") {
-        users = JSON.parse(users);
-      }
+      console.log("req.pagination", req.pagination);
+      const { page, limit, skip, sort } = req.pagination;
+      const userCacheKey = cacheKeys.users({ page, limit, skip, sort });
+      console.log("usercachkey,", userCacheKey);
+
+      // const { users, pagination } = await UserServices.getUsers({
+      //   page,
+      //   limit,
+      //   skip,
+      //   sort,
+      // });
+      const { users, pagination } = await cacheService.getOrSet(
+        userCacheKey,
+        async () => {
+          const response = await UserServices.getUsers({
+            page,
+            limit,
+            skip,
+            sort,
+          });
+          return response;
+        },
+        6 * 60
+      );
       if (users === null || users.length === 0) {
         return this.errorMessage("No users found", 404, next);
       }
@@ -29,6 +50,7 @@ class UserController extends BaseController {
       return this.successResponse(res, {
         message: "Users found",
         data: users,
+        analytics: pagination,
         status: 200,
       });
     });
@@ -44,10 +66,8 @@ class UserController extends BaseController {
       if (!user) {
         return this.errorMessage("User not found", 404, next);
       }
-      //invalidate the cache
-      userCache.invalidateUsers();
-      //invalidate the specific user cache
-      cacheService.del(`user_${id}`);
+      //invalidate the user
+      invalidateUsersCache();
 
       return this.successResponse(res, {
         message: "User deleted successfully",
@@ -64,11 +84,12 @@ class UserController extends BaseController {
         return this.errorMessage("Please provide user id", 400, next);
       }
 
+      const user_key = cacheKeys.userById(id);
       // const user = await UserServices.findById(id);
-      let user = await userCache.getUserById(id);
-      if (typeof user === "string") {
-        user = JSON.parse(user);
-      }
+      const user = await cacheService.getOrSet(user_key, async () => {
+        const user = await UserServices.findUserById(id);
+        return user;
+      });
       if (!user) {
         return this.errorMessage("User not found", 404, next);
       }
@@ -77,6 +98,20 @@ class UserController extends BaseController {
         message: "User found",
         data: user,
         status: 200,
+      });
+    });
+  }
+  //get by email
+  async getByEmail(req, res, next) {
+    return this.handleRequest(req, res, next, async (req, res) => {
+      const { email } = req.query;
+      if (!email) return this.errorMessage("provide email", 400, next);
+
+      const user = await UserServices.findWithQuery({ email: email });
+      if (!user) return this.errorMessage("user not found", 404, next);
+
+      return this.successResponse(res, {
+        data: user,
       });
     });
   }
@@ -116,11 +151,7 @@ class UserController extends BaseController {
       }
       //update user
       const updatedUser = await UserServices.update(id, updated);
-      //invalidate the cache
-      userCache.invalidateUsers();
-      //invalidate the specific user cache
-      cacheService.del(`user_${id}`);
-      console.log("updated user", updatedUser);
+
       if (!updatedUser) {
         return this.errorMessage("User not found", 404, next);
       }
@@ -157,10 +188,7 @@ class UserController extends BaseController {
       if (!deletedProfile) {
         return this.errorMessage("User not found", 404, next);
       }
-      //invalidate the cache
-      userCache.invalidateUsers();
-      //invalidate the specific user cache
-      cacheService.del(`user_${id}`);
+
       const deletedBy = req.user.role === "admin" ? "by admin" : "";
       return this.successResponse(res, {
         message: `user profile deleted successfully ${deletedBy}`,

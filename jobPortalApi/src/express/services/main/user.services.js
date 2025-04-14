@@ -89,5 +89,29 @@ class UserServices extends BaseRepository {
     await user.save(); //save the user with the new password
     return true;
   }
+  async findUserById(id) {
+    return await User.findById(id).select(
+      "-password -resetPasswordToken -resetPasswordTokenExpiry"
+    ); //exclude password and reset token from the user object
+  }
+  async getUsers(query) {
+    const users = await User.find()
+      .sort(query.sort)
+      .skip(query.skip)
+      .limit(query.limit);
+    const total = await this.countDocuments();
+    const hasNextPage = query.page < total;
+    const hasPreviousPage = query.page > 1;
+    const pagination = {
+      total: total,
+      hasNextPage: hasNextPage,
+      hasPreviousPage: hasPreviousPage,
+    };
+
+    return {
+      users,
+      pagination,
+    };
+  }
 }
 module.exports = new UserServices();

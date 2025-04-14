@@ -1,9 +1,9 @@
 const BaseController = require("./Base.Controller");
-const jobServices = require("../services/databaseServices/job.services");
-const userServices = require("../services/databaseServices/user.services");
+const jobServices = require("../services/main/job.services");
+const userServices = require("../services/main/user.services");
 const Job = require("../models/job.model");
-const jobCache = require("../services/cacheService/jobCache");
-const userCache = require("../services/cacheService/userCache");
+const CacheService = require("../utils/cacheService/cacheService");
+const cacheKeys = require("../utils/cacheService/cacheKeys");
 
 class JobController extends BaseController {
   constructor() {
@@ -14,9 +14,6 @@ class JobController extends BaseController {
         this[method] = this[method].bind(this);
       }
     });
-
-    //caches key
-    this.rec_key = "recommendedJobs";
   }
 
   async postJob(req, res, next) {
@@ -43,10 +40,16 @@ class JobController extends BaseController {
       if (!job) {
         return this.errorMessage("job not posted", 400, next);
       }
+      //invalidate the jobs
+      console.log("keys:", CacheService.keys());
+      CacheService.delByPrefix("jobs::");
+      console.log("keys:", CacheService.keys());
+
       //update the user model  to add the job id to the posted jobs array
       const user = await userServices.update(userId, {
         $push: { postedJobs: job._id },
       });
+
       if (!user) {
         return this.errorMessage(
           "please, register first to post a job",
@@ -54,7 +57,6 @@ class JobController extends BaseController {
           next
         );
       }
-      console.log("user", user);
       return this.successResponse(res, {
         message: "job posted successfully",
         status: 200,
@@ -68,15 +70,28 @@ class JobController extends BaseController {
     return this.handleRequest(req, res, next, async (req, res) => {
       console.log("query", req.filter);
       console.log("pagination", req.pagination);
-      const { jobs, analytics } = await jobServices.getJob(
-        req.filter,
-        req.pagination
+
+      const filter = { ...req.filter, ...req.pagination };
+      const cacheKey = cacheKeys.jobs(filter);
+
+      const { jobs, analytics } = await CacheService.getOrSet(
+        cacheKey,
+        async () => {
+          const response = await jobServices.getJob(req.filter, req.pagination);
+          return response;
+        },
+        5 * 60
       );
+      console.log("keys:", CacheService.keys());
+      // const { jobs, analytics } = await jobServices.getJob(
+      //   req.filter,
+      //   req.pagination
+      // );
 
       if (jobs.length === 0) return this.successResponse(res, "No Jobs Found");
       if (!jobs) return this.errorMessage("No jobs found", 400, next);
 
-      console.log("analytics", analytics);
+      // console.log("analytics", analytics);
       return this.successResponse(res, {
         message: "jobs fetched successfully",
         status: 200,
@@ -95,12 +110,15 @@ class JobController extends BaseController {
   async getJobById(req, res, next) {
     return this.handleRequest(req, res, next, async (req, res) => {
       const { id } = req.params;
-      console.log("id job:", id);
+      const cachekey = cacheKeys.jobById(id);
+
+      const job = await CacheService.getOrSet(cachekey, async () => {
+        const job = await jobServices.findById(id);
+        return job;
+      });
+      console.log("keys:", CacheService.keys());
       // const job = await jobServices.findById(id);
-      const job = await jobCache.getJobById(id);
-      if (typeof job === "string") {
-        job = JSON.parse(job);
-      }
+
       if (!job) return this.errorMessage("job not found", 400, next);
 
       return this.successResponse(res, {
@@ -133,9 +151,10 @@ class JobController extends BaseController {
         return this.errorMessage("job not updated", 400, next);
       }
       //invalidate the cache
-      jobCache.invalidateJobById(id);
-      //invalidate the all jobs cache
-      jobCache.invalidateAllJobs();
+      console.log("keys:", CacheService.keys());
+      CacheService.del(`job::${id}`);
+      console.log("keysA:", CacheService.keys());
+
       return this.successResponse(res, {
         message: "job updated successfully",
         status: 200,
@@ -156,9 +175,12 @@ class JobController extends BaseController {
         );
       const deletedJob = await jobServices.delete(id);
       if (!deletedJob) return this.errorMessage("job not deleted", 400, next);
+
       //invalidate the cache
-      jobCache.invalidateJobById(id);
-      jobCache.invalidateAllJobs();
+      console.log("keys:", CacheService.keys());
+      CacheService.del(`job::${id}`);
+      console.log("keysA:", CacheService.keys());
+
       //remove the job id from the user model postedJobs array
 
       const user = await userServices.update(req.user.id, {
@@ -177,12 +199,17 @@ class JobController extends BaseController {
       const userId = req.user.id;
       console.log("req.pagination:", req.pagination);
       const { limit, page, skip } = req.pagination;
-
+      const userCacheKey = cacheKeys.userById(userId);
       // const user = await userServices.findById(userId);
-      let user = await userCache.getUserById(userId);
-      if (typeof user === "string") {
-        user = JSON.parse(user);
-      }
+      const user = await CacheService.getOrSet(
+        userCacheKey,
+        async () => {
+          const user = await userServices.findById(userId);
+          return user;
+        },
+        0
+      );
+
       if (!user) return this.errorMessage("user not found", 400, next);
 
       const params = {
@@ -195,10 +222,14 @@ class JobController extends BaseController {
         limit: limit,
         page: page,
       };
-      this.rec_key = `recommendedJobs_${userId}`;
-      const response = await jobServices.getRecommendedJobs(
-        params,
-        this.rec_key
+      const rec_key = cacheKeys.jobs(params);
+      const response = await CacheService.getOrSet(
+        rec_key,
+        async () => {
+          const response = await jobServices.getRecommendedJobs(params);
+          return response;
+        },
+        5 * 60
       );
       if (!response.recommendedJobs && !response.recommendedJobs.length === 0)
         return this.errorMessage("No jobs found", 400, next);

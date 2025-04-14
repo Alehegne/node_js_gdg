@@ -1,10 +1,7 @@
 const BaseController = require("./Base.Controller");
-const authServices = require("../services/databaseServices/auth.service");
-const UserServices = require("../services/databaseServices/user.services");
-const Utils = require("../utils/utils");
+const authServices = require("../services/main/auth.service");
+const UserServices = require("../services/main/user.services");
 const Config = require("../config/allConfig");
-const userCache = require("../services/cacheService/userCache");
-const { cacheService } = require("../services/cacheService/cacheService");
 
 class AuthController extends BaseController {
   constructor() {
@@ -37,10 +34,7 @@ class AuthController extends BaseController {
       }
       const user = await UserServices.create(data);
       console.log("users successfully created", user);
-      //invalidate the cache
-      userCache.invalidateUsers();
-      //invalidate the specific user cache
-      cacheService.del(`user_${user._id}`);
+
       if (!user) {
         return this.errorMessage("User not created", 400, next);
       }

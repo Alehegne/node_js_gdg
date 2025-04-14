@@ -5,7 +5,6 @@ class BaseRepository {
     this.model = model;
   }
   async create(data) {
-    console.log("create method called in base repository", this.model);
     const document = await new this.model(data);
     await document.save();
     return document;
@@ -46,7 +45,7 @@ class BaseRepository {
     const documents = await this.model.find(query);
     return documents;
   }
-  async countDocuments(query) {
+  async countDocuments(query = {}) {
     const count = await this.model.countDocuments(query);
     return count;
   }

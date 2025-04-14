@@ -3,6 +3,7 @@ const UserController = require("../controllers/user.controller");
 const Router = express.Router;
 const multer = require("multer");
 const middleware = require("../middleware/allMiddleware");
+const userController = require("../controllers/user.controller");
 
 const userRouter = new Router();
 const upload = multer();
@@ -10,8 +11,11 @@ userRouter.get(
   "/all",
   middleware.verifyToken,
   // middleware.verifyRole(["admin"]),
+  middleware.queryFilter([]),
   UserController.getUser
 );
+//get user by email
+userRouter.get("/user", middleware.verifyToken, userController.getByEmail);
 userRouter.delete(
   "/delete/:id",
   middleware.verifyToken,
